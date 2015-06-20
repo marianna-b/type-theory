@@ -11,6 +11,9 @@ rule token = parse
              | '\n'             { TEoln }
              | '('              { TOpenPar }
              | ')'              { TClosePar }
+             | '['              { TOpenBr }
+             | ']'              { TCloseBr }
              | '\\'             { TSlash }
              | '.'              { TDot }
+             | ":="             { TAss }
              | eof              { TEOF }

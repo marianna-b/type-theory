@@ -4,9 +4,15 @@
 
 %token <string> TVar
 %token TOpenPar TClosePar TSlash TDot TEoln TEOF
+%token TOpenBr TCloseBr TAss
 %start lambda_expr
+%start lambda_assign
 %type <Lambda.lambda> lambda_expr
+%type <Lambda.lambda * string * Lambda.lambda> lambda_assign
 %%
+
+lambda_assign: expr TOpenBr TVar TAss expr TCloseBr { ($1, $3, $5) }
+                ;
 
 lambda_expr: expr TEoln TEOF { $1 }
          | expr TEOF { $1 }
