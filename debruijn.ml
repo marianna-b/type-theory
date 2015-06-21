@@ -21,7 +21,9 @@ let convert l free =
   let names = H.create 4 in
   let rec convert' idx = function
     | L.Var a when (H.mem names a) -> Var (idx - H.find names a)
-    | L.Var a                      -> failwith "Free variable fuck you"
+    | L.Var a                      -> 
+   					free := List.append !free [a] ;
+    					Var (-List.length !free)
     | L.Lambda (v, e)              -> begin
                                         H.add names v (idx + 1);
                                         let e' = convert' (idx + 1) e in
