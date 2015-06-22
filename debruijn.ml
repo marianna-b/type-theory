@@ -77,7 +77,11 @@ let rec betareduct' expr idx = match expr with
 	| Lambda a -> Lambda (betareduct' a (idx + 1))
 	| App (Lambda x, b) -> let r = betareduct' b idx in
 				sub_debruijn x r (depth r)
-	| App (a, b) -> App (betareduct' a idx, betareduct' b idx)
+	| App (a, b) -> let x = betareduct' a idx in
+				if (x = a) then	
+					App (a, betareduct' b idx)
+				else
+					App (x, b)
 and betareduct expr = betareduct' expr 0
 
 let rec get_name a = 
