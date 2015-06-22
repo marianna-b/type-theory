@@ -3,7 +3,7 @@
 }
 
 let whitespace = [' ' '\t' '\r']
-let variable   = ['a'-'z']['a'-'z' '0'-'9']*
+let variable   = ['a'-'z']['a'-'z' '0'-'9''\'']*
 
 rule token = parse
              | whitespace       { token lexbuf }

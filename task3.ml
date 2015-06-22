@@ -1,7 +1,5 @@
 open Lambda
 
-
-
 let _ =
        let s = read_line() in
        let (e, v, a) = Parser.lambda_assign Lexer.token (Lexing.from_string s) in
