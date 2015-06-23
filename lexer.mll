@@ -9,6 +9,8 @@ rule token = parse
              | whitespace       { token lexbuf }
              | variable as var  { TVar var }
              | '\n'             { TEoln }
+             | '='              { TEq }
+             | ','              { TComma }
              | '('              { TOpenPar }
              | ')'              { TClosePar }
              | '['              { TOpenBr }
