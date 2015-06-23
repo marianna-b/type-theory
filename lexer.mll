@@ -18,4 +18,4 @@ rule token = parse
              | '\\'             { TSlash }
              | '.'              { TDot }
              | ":="             { TAss }
-             | eof              { TEOF }
+             | eof              { TEOF}

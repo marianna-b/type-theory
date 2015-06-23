@@ -1,18 +1,12 @@
-module E = Equation
+open Equation
+open Unification
 
-let rec to_string_term e =
-let rec to_string_list_term = function
-      | [] -> ""
-      | x::[] -> to_string_term x
-      | x::xs -> (to_string_term x)^", "^(to_string_list_term xs)
-in
-match e with
-      | E.Var a-> a
-      | E.Func (a, l) -> a ^"("^(to_string_list_term l)^")"
-
-let to_string_eq (a, b) = (to_string_term a)^" = "^(to_string_term b)
+let print_eq e = print_endline (to_string_eq e)
 
 let _ =
-        let s = read_line () in
-        let (a, b) = Parser.equation Lexer.token (Lexing.from_string s) in
-        print_endline (to_string_eq (a, b))
+let rec read_all _ = try
+      let s = input_line stdin in
+      let eq = Parser.equation Lexer.token (Lexing.from_string s) in
+      eq :: read_all() with End_of_file -> [] in
+    let r = read_all () in
+    try List.iter print_eq (unificate r) with UFail -> print_endline "No solution"

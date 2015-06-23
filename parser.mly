@@ -4,9 +4,9 @@
 %}
 
 %token <string> TVar
-%token TOpenPar TClosePar TSlash TDot TEoln TEOF
+%token TOpenPar TClosePar TSlash TDot TEoln 
 %token TOpenBr TCloseBr TAss
-%token TEq TComma
+%token TEq TComma TEOF
 %start lambda_expr
 %start lambda_assign
 %start equation
@@ -15,23 +15,21 @@
 %type <Equation.equation * Equation.equation> equation
 %%
 
-lambda_assign: expr TOpenBr TVar TAss expr TCloseBr { ($1, $3, $5) }
+lambda_assign: expr TOpenBr TVar TAss expr TCloseBr TEOF { ($1, $3, $5) }
                 ;
 
-lambda_expr: expr TEoln TEOF { $1 }
-         | expr TEOF { $1 }
+lambda_expr: expr TEOF { $1 }
          ;
 
-equation: term TEq term TEoln TEOF { ($1, $3) }
-          | term TEq term TEOF { ($1, $3) }
+equation: term TEq term TEOF { ($1, $3) }
           ;
 
-term: TVar TOpenPar termlist TClosePar { E.Func ($1, $3) }
-        | TVar { E.Var $1 }
+term: TVar { E.Var $1 }
+        | TVar TOpenPar termlist TClosePar { E.Func ($1, $3) }
         ;
 
-termlist: termlist TComma term { List.append $1 [$3] }
-          | term { [$1] }
+termlist: term { [$1] }
+          | termlist TComma term { List.append $1 [$3] }
           ;
 
 expr: lambda         { $1 }
