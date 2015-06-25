@@ -3,10 +3,6 @@ module L = Lambda
 module H = Hashtbl
 module M = Map.Make(struct type t = int let compare = compare end)
 
-type expr = Var of int 
-          | App of expr * expr 
-          | Lambda of expr
-
 let rec get_index' list elem idx =
   match list with
     [] -> -1
@@ -16,6 +12,21 @@ let rec get_index' list elem idx =
 let get_index list elem = get_index' list elem 0
 
 let rec get_elem list idx = if idx = 0 then List.hd list else get_elem (List.tl list) (idx - 1)
+
+let rec get_name a = 
+	let c = String.make 1 (Char.chr((Char.code 'a') + a mod 26)) in
+	if (a / 26 = 0) then c else c^(get_name (a / 26))
+
+let get_new_name list free idx am = 
+	while (let res = get_name(!am) in (get_index free res) <> -1) do
+		am := (!am + 1)
+  	done ;
+	am := (!am + 1);
+	list := (M.add idx !am !list) ; get_name(!am)
+
+type expr = Var of int 
+          | App of expr * expr 
+          | Lambda of expr
 
 let convert l free =
   let names = H.create 4 in
@@ -38,9 +49,7 @@ let rec to_string_debruijn = function
       | Lambda b -> "(\\."^(to_string_debruijn b)^")"
       | Var a -> string_of_int a
 
-(* need to fix adding: need to add only to variables greater than depth of expr2 *)
 let rec recount expr d = 
-	(*print_endline ((to_string_debruijn expr)^ " " ^ (string_of_int d)^ " " ^ (string_of_int len));*)
 	let rec recount' e l = match e with
 		| Var a when (a >= l) -> Var (a + d)
 		| Var a -> Var a
@@ -48,24 +57,10 @@ let rec recount expr d =
 		| App (a, b) -> App (recount' a l, recount' b l)
 	in recount' expr 0
 
-let rec decrement = function
-	| Var a when (a >= 0) -> Var (a - 1)
-	| Var a -> Var a
-	| Lambda b -> Lambda (decrement b)
-	| App (a, b) -> App (decrement a, decrement b)
-
-let rec depth = function
-	| Var _ -> 0
-	| App (a, b) -> let r = depth a in
-			let l = depth b in
-			if (r > l) then r else l
-	| Lambda a -> 1 + (depth a)
-
-(* need to fix : need to dec only to variables greater than depth of expr *)
-let rec sub_debruijn expr expr2 len = 
+let rec sub_debruijn expr expr2 = 
 	let rec subd expr d = 
 		match expr with 
-		| Var a when (d < a) -> decrement expr
+		| Var a when (d < a) -> Var (if a>= 0 then a - 1 else a)
 		| Var a when (d > a) -> expr
 		| Var a -> recount expr2 d 
 		| Lambda b -> Lambda (subd b (d + 1))
@@ -76,24 +71,13 @@ let rec betareduct' expr idx = match expr with
 	Var a -> expr
 	| Lambda a -> Lambda (betareduct' a (idx + 1))
 	| App (Lambda x, b) -> let r = betareduct' b idx in
-				sub_debruijn x r (depth r)
+				sub_debruijn x r
 	| App (a, b) -> let x = betareduct' a idx in
 				if (x = a) then	
 					App (a, betareduct' b idx)
 				else
 					App (x, b)
 and betareduct expr = betareduct' expr 0
-
-let rec get_name a = 
-	let c = String.make 1 (Char.chr((Char.code 'a') + a mod 26)) in
-	if (a / 26 = 0) then c else c^(get_name (a / 26))
-
-let get_new_name list free idx am = 
-	while (let res = get_name(!am) in (get_index free res) <> -1) do
-		am := (!am + 1)
-  	done ;
-	am := (!am + 1);
-	list := (M.add idx !am !list) ; get_name(!am)
 
 let rec convert_back' expr list idx free am = match expr with
 	Var a when (a < 0) -> L.Var (get_elem free (-a - 1))
