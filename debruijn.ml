@@ -24,6 +24,8 @@ let get_new_name list free idx am =
 	am := (!am + 1);
 	list := (M.add idx !am !list) ; get_name(!am)
 
+(*--------------------------------------------------------------------------------------------*)
+
 type expr = Var of int 
           | App of expr * expr 
           | Lambda of expr
@@ -49,7 +51,7 @@ let rec to_string_debruijn = function
       | Lambda b -> "(\\."^(to_string_debruijn b)^")"
       | Var a -> string_of_int a
 
-let rec recount expr d = 
+let rec recount d expr = 
 	let rec recount' e l = match e with
 		| Var a when (a >= l) -> Var (a + d)
 		| Var a -> Var a
@@ -58,25 +60,24 @@ let rec recount expr d =
 	in recount' expr 0
 
 let rec sub_debruijn expr expr2 = 
-	let rec subd expr d = 
+	let rec subd e2 d expr = 
 		match expr with 
 		| Var a when (d < a) -> Var (if a>= 0 then a - 1 else a)
 		| Var a when (d > a) -> expr
-		| Var a -> recount expr2 d 
-		| Lambda b -> Lambda (subd b (d + 1))
-		| App (a, b) -> App (subd a d, subd b d)
-	in subd expr 0 
+		| Var a -> recount d e2
+		| Lambda b -> Lambda (subd e2 (d + 1) b)
+		| App (a, b) -> App (subd e2 d a, subd e2 d b)
+	in subd expr2 0 expr
 
 let rec betareduct' expr idx = match expr with
-	Var a -> expr
-	| Lambda a -> Lambda (betareduct' a (idx + 1))
-	| App (Lambda x, b) -> let r = betareduct' b idx in
-				sub_debruijn x r
-	| App (a, b) -> let x = betareduct' a idx in
-				if (x = a) then	
-					App (a, betareduct' b idx)
+	Var a -> (false, expr)
+	| Lambda a -> let (y, x) = betareduct' a (idx + 1) in (y, Lambda x)
+	| App (Lambda x, b) -> let (_, r) = betareduct' b idx in (true, sub_debruijn x r)
+	| App (a, b) -> let (y, x) = betareduct' a idx in
+				if (y) then	
+					(true, App (x, b))
 				else
-					App (x, b)
+					let (y, x) = betareduct' b idx in (y, App (a, x))
 and betareduct expr = betareduct' expr 0
 
 let rec convert_back' expr list idx free am = match expr with
@@ -92,5 +93,5 @@ let convert_back expr free =
 	convert_back' expr list 0 free amount
 
 let rec normalize e = match betareduct e with
-	| e' when (e' = e) -> e'
-	| e' ->  (*print_endline (to_string_lambda(convert_back e' [])); print_endline(to_string_debruijn(e')); *) normalize e'
+	| (false, e') -> e'
+	| (true, e') -> normalize e'
