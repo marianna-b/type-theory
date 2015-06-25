@@ -80,8 +80,7 @@ let rec sub_debruijn expr expr2 =
 
 let rec apply e = function
 	| [] -> e
-	| x::xs -> let a = x e in (*print_endline("A "^(to_string_debruijn a));*)
-					apply a xs
+	| x::xs -> let a = x e in apply a xs
 
 let rec apply_all = function
 	| Var a -> Var a
@@ -128,5 +127,5 @@ let convert_back expr free =
 	convert_back' expr list 0 free amount
 
 let rec normalize e = match betareduct e with
-	| (false, e') -> (*print_endline("F "^(to_string_debruijn(e'))); *) e'
-	| (true, e') -> (*print_endline("T "^(to_string_debruijn(e')));*)  normalize e'
+	| (false, e') -> e'
+	| (true, e') -> normalize e'
