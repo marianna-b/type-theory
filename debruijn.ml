@@ -29,6 +29,9 @@ let get_new_name list free idx am =
 type expr = Var of int 
           | App of expr * expr 
           | Lambda of expr
+	  | Ref of expr ref
+	  | Lazy of ((expr->expr) list)*expr
+
 
 let convert l free =
   let names = H.create 4 in
@@ -49,7 +52,9 @@ let convert l free =
 let rec to_string_debruijn = function
       | App (a, b) -> "("^(to_string_debruijn a)^" "^(to_string_debruijn  b)^")"
       | Lambda b -> "(\\."^(to_string_debruijn b)^")"
+      | Lazy (list, b) -> "Lazy("^(to_string_debruijn b)^" + "^(string_of_int (List.length list))^")"
       | Var a -> string_of_int a
+      | Ref r ->"Ref "^  (to_string_debruijn !r)
 
 let rec recount d expr = 
 	let rec recount' e l = match e with
@@ -57,6 +62,8 @@ let rec recount d expr =
 		| Var a -> Var a
 		| Lambda b -> Lambda (recount' b (l + 1))
 		| App (a, b) -> App (recount' a l, recount' b l)
+		| Ref r -> recount' !r l
+		| Lazy _ -> failwith "No lazy in recount"
 	in recount' expr 0
 
 let rec sub_debruijn expr expr2 = 
@@ -64,15 +71,25 @@ let rec sub_debruijn expr expr2 =
 		match expr with 
 		| Var a when (d < a) -> Var (if a>= 0 then a - 1 else a)
 		| Var a when (d > a) -> expr
-		| Var a -> recount d e2
+		| Var a -> Lazy ([recount d], e2)
+		| Ref r -> subd e2 d !r
+		| Lazy (list, e) -> Lazy ((List.append list [subd e2 d]), e)
 		| Lambda b -> Lambda (subd e2 (d + 1) b)
 		| App (a, b) -> App (subd e2 d a, subd e2 d b)
 	in subd expr2 0 expr
 
-let rec betareduct' expr idx = match expr with
-	Var a -> (false, expr)
+let rec betareduct' expr idx =  match expr with
+	| Var a -> (false, expr)
 	| Lambda a -> let (y, x) = betareduct' a (idx + 1) in (y, Lambda x)
-	| App (Lambda x, b) -> let (_, r) = betareduct' b idx in (true, sub_debruijn x r)
+	| App (Lambda x, b) -> (true, sub_debruijn x (Ref (ref b)))
+	| Ref r -> let (x, y) = betareduct' !r idx in 
+		if x then (r := y ; (x, expr)) else (x, expr)
+	| Lazy ([], e) -> let (x, y) = betareduct' e idx in (true, y)
+	| Lazy (x::xs, e) -> (let (a, y) = betareduct' e idx in 
+						if a then
+							(true, Lazy (x::xs, y))
+						else
+							 (true, (Lazy (xs, x e))))
 	| App (a, b) -> let (y, x) = betareduct' a idx in
 				if (y) then	
 					(true, App (x, b))
@@ -86,6 +103,7 @@ let rec convert_back' expr list idx free am = match expr with
 	| Lambda b -> let res = get_new_name list free (idx + 1) am in 
 		L.Lambda (res, convert_back' b list (idx + 1) free am)
 	| App (a, b) -> L.App (convert_back' a list idx free am, convert_back' b list idx free am)
+	| _ -> failwith "No ref or lazy in convert_back"
 
 let convert_back expr free = 
 	let list = ref M.empty in
@@ -93,5 +111,5 @@ let convert_back expr free =
 	convert_back' expr list 0 free amount
 
 let rec normalize e = match betareduct e with
-	| (false, e') -> e'
-	| (true, e') -> normalize e'
+	| (false, e') -> (*print_endline("F "^(to_string_debruijn(e')));*) e'
+	| (true, e') -> (*print_endline("T "^(to_string_debruijn(e')));*)  normalize e'
