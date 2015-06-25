@@ -78,18 +78,21 @@ let rec sub_debruijn expr expr2 =
 		| App (a, b) -> App (subd e2 d a, subd e2 d b)
 	in subd expr2 0 expr
 
-let rec betareduct' expr idx =  match expr with
+let rec apply e = function
+	| [] -> e
+	| x::xs -> apply (x e) xs
+
+let rec betareduct' expr idx = match expr with
 	| Var a -> (false, expr)
-	| Lambda a -> let (y, x) = betareduct' a (idx + 1) in (y, Lambda x)
+	| Lambda a -> let (y, x) = betareduct' a (idx + 2) in (y, Lambda x)
 	| App (Lambda x, b) -> (true, sub_debruijn x (Ref (ref b)))
 	| Ref r -> let (x, y) = betareduct' !r idx in 
 		if x then (r := y ; (x, expr)) else (x, expr)
-	| Lazy ([], e) -> let (x, y) = betareduct' e idx in (true, y)
-	| Lazy (x::xs, e) -> (let (a, y) = betareduct' e idx in 
+	| Lazy (list, e) -> (let (a, y) = betareduct' e idx in 
 						if a then
-							(true, Lazy (x::xs, y))
+							(true, Lazy (list, y))
 						else
-							 (true, (Lazy (xs, x e))))
+							 (true, apply e list))
 	| App (a, b) -> let (y, x) = betareduct' a idx in
 				if (y) then	
 					(true, App (x, b))
@@ -111,5 +114,5 @@ let convert_back expr free =
 	convert_back' expr list 0 free amount
 
 let rec normalize e = match betareduct e with
-	| (false, e') -> (*print_endline("F "^(to_string_debruijn(e')));*) e'
-	| (true, e') -> (*print_endline("T "^(to_string_debruijn(e')));*)  normalize e'
+	| (false, e') -> print_endline("F "^(to_string_debruijn(e'))); e'
+	| (true, e') -> print_endline("T "^(to_string_debruijn(e')));  normalize e'
