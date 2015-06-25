@@ -109,9 +109,8 @@ let rec betareduct' expr idx = match expr with
 	in match a with
 		| Lazy (list, Ref x) -> ( match !x with
 				| Lambda k -> 
-					let k' = apply_all k in
-					let k'' = apply (Lambda k') list in
-					(true, App (k'', b))
+					let k' = apply_all a in
+					(true, App (k', b))
 				| _ -> func)
 		| _ -> func	
 and betareduct expr = betareduct' expr 0
