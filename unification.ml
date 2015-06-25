@@ -33,15 +33,15 @@ let rec unificate' e1 e2 = match e2 with
                     (
                      match x with
                        | (Var a, Var b) when (a = b) -> unificate' e1 xs
-                       | (Var a, Var b) when a > b -> unificate' (List.append e1 [(Var b, Var a)]) xs
-                       | (Var a, Var b) -> unificate' (List.append e1 [x]) xs
+                       | (Var a, Var b) when a > b -> unificate' (List.append (List.filter ((<>) x) e1) [(Var b, Var a)]) xs
+                       | (Var a, Var b) -> unificate' (List.append (List.filter ((<>) x) e1) [x]) xs
                        | (Var a, Func (b, c)) -> (
                                                   let e1' = (replace a (Func (b, c)) e1) in
                                                       if e1' <> e1 then List.append e1' e2
                                                       else unificate' (List.append e1 [x]) xs
                                                   )
                        | (Func (a, b), Var c) ->
-                               unificate' e1 ((Var c, Func (a, b))::xs)
+                               unificate' (List.filter ((<>) x) e1) ((Var c, Func (a, b))::xs)
                        | (Func (a, b), Func (c, d)) -> List.append (get_eq_from_list b d) (List.append e1 xs)
                     )
                 else raise UFail
