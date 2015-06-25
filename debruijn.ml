@@ -80,24 +80,40 @@ let rec sub_debruijn expr expr2 =
 
 let rec apply e = function
 	| [] -> e
-	| x::xs -> apply (x e) xs
+	| x::xs -> let a = x e in (*print_endline("A "^(to_string_debruijn a));*)
+					apply a xs
 
+let rec apply_all = function
+	| Var a -> Var a
+	| Lambda a -> Lambda (apply_all a)
+	| Ref r -> apply_all !r
+	| Lazy (list, e) -> apply (apply_all e) list 
+	| App (a, b) -> App (apply_all a, apply_all b)
+		
 let rec betareduct' expr idx = match expr with
 	| Var a -> (false, expr)
 	| Lambda a -> let (y, x) = betareduct' a (idx + 2) in (y, Lambda x)
-	| App (Lambda x, b) -> (true, sub_debruijn x (Ref (ref b)))
+	| App (Lambda x, b) -> let (_, a) = betareduct' b idx in
+				(true, sub_debruijn x (Ref (ref a)))
 	| Ref r -> let (x, y) = betareduct' !r idx in 
 		if x then (r := y ; (x, expr)) else (x, expr)
 	| Lazy (list, e) -> (let (a, y) = betareduct' e idx in 
-						if a then
-							(true, Lazy (list, y))
-						else
-							 (true, apply e list))
-	| App (a, b) -> let (y, x) = betareduct' a idx in
-				if (y) then	
-					(true, App (x, b))
-				else
-					let (y, x) = betareduct' b idx in (y, App (a, x))
+						if a then (true, Lazy (list, y))
+						else (true, apply e list))
+	| App (a, b) -> let func = (
+	let (y, x) = betareduct' a idx in
+		if (y) then	
+			(true, App (x, b))
+		else
+			let (y, x) = betareduct' b idx in (y, App (a, x))) 
+	in match a with
+		| Lazy (list, Ref x) -> ( match !x with
+				| Lambda k -> 
+					let k' = apply_all k in
+					let k'' = apply (Lambda k') list in
+					(true, App (k'', b))
+				| _ -> func)
+		| _ -> func	
 and betareduct expr = betareduct' expr 0
 
 let rec convert_back' expr list idx free am = match expr with
@@ -114,5 +130,5 @@ let convert_back expr free =
 	convert_back' expr list 0 free amount
 
 let rec normalize e = match betareduct e with
-	| (false, e') -> print_endline("F "^(to_string_debruijn(e'))); e'
-	| (true, e') -> print_endline("T "^(to_string_debruijn(e')));  normalize e'
+	| (false, e') -> (*print_endline("F "^(to_string_debruijn(e'))); *) e'
+	| (true, e') -> (*print_endline("T "^(to_string_debruijn(e')));*)  normalize e'
