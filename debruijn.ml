@@ -89,6 +89,11 @@ let rec apply_all = function
 	| Ref r -> apply_all !r
 	| Lazy (list, e) -> apply (apply_all e) list 
 	| App (a, b) -> App (apply_all a, apply_all b)
+
+let rec check_lazy_lambda = function
+	| Lazy (list, Ref r) -> check_lazy_lambda !r
+	| Lambda _ -> true
+	| _ -> false
 		
 let rec betareduct' expr idx = match expr with
 	| Var a -> (false, expr)
@@ -106,13 +111,7 @@ let rec betareduct' expr idx = match expr with
 			(true, App (x, b))
 		else
 			let (y, x) = betareduct' b idx in (y, App (a, x))) 
-	in match a with
-		| Lazy (list, Ref x) -> ( match !x with
-				| Lambda k -> 
-					let k' = apply_all a in
-					(true, App (k', b))
-				| _ -> func)
-		| _ -> func	
+	in if (check_lazy_lambda a) then (true, App ((apply_all a), b)) else func
 and betareduct expr = betareduct' expr 0
 
 let rec convert_back' expr list idx free am = match expr with
