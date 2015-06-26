@@ -52,21 +52,27 @@ let get_types expr =
 in let (q, w) = get_types' expr in
 	(q, w, !free_t)
 
-let rec find_sub e = function 
-	| [] -> e
-	| (a, b)::xs -> if a = e then b else find_sub e xs
+let rec find_sub e u = (*print_endline e ;*) match u with
+	| [] -> E.Var e
+	| (a, b)::xs -> match (a, b) with
+			| (E.Var x, y) when (x = e) -> y
+			| _ -> find_sub e xs
 
 let rec apply u = function
 	| E.Func (f, a) -> E.Func (f, List.map (apply u) a)
-  	| E.Var x -> find_sub (E.Var x) u
+  	| E.Var x -> let w = (find_sub x u) in
+			if w = (E.Var x) then w else apply u w
 
 let _ = 
 	let s = read_line() in
 	let e = Parser.lambda_expr Lexer.token (Lexing.from_string s) in
 	let (a, b, c) = get_types e in
 	try 
+		(*List.iter E.print_eq b;*)
 		let u = U.unificate b in
+		(*(print_endline (E.to_string_type a));*)
 		let t = apply u a in
+		(*List.iter E.print_eq u;*)
 		(print_endline (E.to_string_type t));
 		List.iter (fun (a, b) -> print_endline (a^":"^b)) c
-	with U.UFail -> print_endline "Не умеет типа"
+	with U.UFail -> print_endline "Не имеет типа"

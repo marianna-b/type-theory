@@ -27,26 +27,20 @@ let check = function
      | (Var a, Func (b, c)) when (exists_in a c) -> false
      | _ -> true
 exception UFail
-let rec unificate' e1 e2 = match e2 with
-     | [] -> e1
-     | x::xs -> if check x then 
-                    (
-                     match x with
-                       | (Var a, Var b) when (a = b) -> unificate' e1 xs
-                       | (Var a, Var b) when a > b -> unificate' (List.append (List.filter ((<>) x) e1) [(Var b, Var a)]) xs
-                       | (Var a, Var b) -> unificate' (List.append (List.filter ((<>) x) e1) [x]) xs
-                       | (Var a, Func (b, c)) -> (
-                                                  let e1' = (replace a (Func (b, c)) e1) in
-                                                      if e1' <> e1 then List.append e1' e2
-                                                      else unificate' (List.append e1 [x]) xs
-                                                  )
-                       | (Func (a, b), Var c) ->
-                               unificate' (List.filter ((<>) x) e1) ((Var c, Func (a, b))::xs)
-                       | (Func (a, b), Func (c, d)) -> List.append (get_eq_from_list b d) (List.append e1 xs)
-                    )
-                else raise UFail
+let rec tryunif e1 x = if check x then ( 
+match x with 
+	| (Var a, Var b) when (a = b) -> List.filter ((<>) x) e1
+	| (Func (a, b), Var c) -> (Var c, Func (a, b))::(List.filter ((<>) x) e1)
+	| (Func (a, b), Func (c, d)) -> List.append (get_eq_from_list b d) (List.filter ((<>) x) e1) 
+	| (Var a, y) -> List.append (replace a y (List.filter ((<>) x) e1)) [x]
+	)
+else raise UFail
+
+let rec unificate' old = function
+	| [] -> old 
+	| x::xs -> unificate' (tryunif old x) xs
 
 
-let rec unificate e = (*print_eq_list e ; print_endline "" ; print_endline "" ;*) match (unificate' [] e) with
+let rec unificate e = (*print_eq_list e ; print_endline "" ; print_endline "" ; *) match (unificate' [] e) with
      | e' when e = e' -> List.sort_uniq compare e
      | e' -> unificate e'
