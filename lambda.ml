@@ -13,7 +13,7 @@ let rec to_string_lambda = function
 let print_set s = SS.iter print_endline s
 
 let rec free_var = function
-       App (a, b)    -> SS.union (free_var a) (free_var b)
+     | App (a, b)    -> SS.union (free_var a) (free_var b)
      | Lambda (a, b) -> SS.remove a (free_var b)
      | Var a         -> SS.singleton a
 

@@ -13,3 +13,9 @@ in match e with
 let to_string_eq (a, b) = (to_string_term a)^" = "^(to_string_term b)
 
 let print_eq_list list = print_string (String.concat "\n" (List.map to_string_eq list))
+
+
+let rec to_string_type e = match e with
+	| Var a -> a
+	| Func (f, (x::(y::[]))) -> "("^(to_string_type x)^"->"^(to_string_type y)^")"
+	| _ -> "fuck"
