@@ -27,18 +27,19 @@ let check = function
      | (Var a, Func (b, c)) when (exists_in a c) -> false
      | _ -> true
 exception UFail
-let rec tryunif e1 x = if check x then ( 
+let rec tryunif e1 x xs = if check x then ( 
 match x with 
-	| (Var a, Var b) when (a = b) -> List.filter ((<>) x) e1
-	| (Func (a, b), Var c) -> (Var c, Func (a, b))::(List.filter ((<>) x) e1)
-	| (Func (a, b), Func (c, d)) -> List.append (get_eq_from_list b d) (List.filter ((<>) x) e1) 
-	| (Var a, y) -> List.append (replace a y (List.filter ((<>) x) e1)) [x]
+	| (Var a, Var b) when (a = b) -> (List.filter ((<>) x) e1, xs)
+	| (Func (a, b), Var c) -> ((Var c, Func (a, b))::(List.filter ((<>) x) e1), xs)
+	| (Func (a, b), Func (c, d)) -> (List.append (get_eq_from_list b d) (List.filter ((<>) x) e1), xs)
+	| (Var a, y) -> (List.append (replace a y (List.filter ((<>) x) e1)) [x], replace a y xs)
 	)
 else raise UFail
 
 let rec unificate' old = function
 	| [] -> old 
-	| x::xs -> unificate' (tryunif old x) xs
+	| x::xs -> let (a, b) = (tryunif old x xs) in 
+		unificate' a b
 
 
 let rec unificate e = (*print_eq_list e ; print_endline "" ; print_endline "" ; *) match (unificate' [] e) with
